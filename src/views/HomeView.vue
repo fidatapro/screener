@@ -2,12 +2,13 @@
   <v-data-table
     :headers="headers"
     :items="desserts"
-    :rows-per-page-items="listSize" 
     :page="2"
     sort-by="calories"
     class="elevation-1"
     :loading = "loading"
     loading-text="Loading... Please wait"
+    :options.sync="pagination"
+    @update:page="updatePage()"
   >
     <template v-slot:top>
       <v-toolbar
@@ -82,12 +83,20 @@
           value: 'rank',
         },
         { text: 'Name', value: 'coin_name' },
-        // { text: 'Symbol', value: 'coin_symbol' },
         { text: 'Price', value: 'coin_price' },
         { text: '30D%', value: 'percent_change_30d' },
         { text: 'YTD%', value: 'percent_change_ytd' },
         { text: '1Y%', value: 'percent_change_1year' },
-      ],
+        { text: 'RSI 2H', value: 'rsi_2h' },
+        { text: 'MACD 2H', value: 'macd_hist_2h' },
+        { text: 'ATR 2H', value: 'atr_2h' },
+        { text: 'BB 2H', value: 'bollinger_bands_lower_2h' },
+        { text: 'TREND CRITICAL', value: 'trend_critical' },
+        { text: 'TREND DAILY', value: 'trend_daily' },
+        { text: 'SUPPORT', value: 'support' },
+        { text: 'RESISTANCE', value: 'resistance' },
+    ],
+      pagination: {},
       listSize: [10, 25, 50, 100],
       desserts: [],
       connection: null,
@@ -116,8 +125,8 @@
     methods: {
       async initialize () {
         let myHeaders = new Headers();
-        myHeaders.append("QC-Access-Key", "RIP1E1LIO3QOJKEH4QEB");
-        myHeaders.append("QC-Secret-Key", "whRZJ8kT05LD1393oCm8jMs4269AoGrxEsbx1zCi0JBvK2gU");
+        myHeaders.append("QC-Access-Key", "EQF6H18BNERJH2ML84F1");
+        myHeaders.append("QC-Secret-Key", "HzFyQix9rmtKp9ti9GAfLs7twqd1g5RAmqls0jJz2Z8bNQBz");
 
         let requestOptions = {
           method: 'GET',
@@ -125,23 +134,23 @@
           redirect: 'follow'
         };
         let coinData = [];
-        let priceData = [];
-        let percentData = [];
+        // let priceData = [];
+        // let percentData = [];
 
-        await fetch("https://quantifycrypto.com/api/v1/coins/prices?rank_from=1&rank_to=1000", requestOptions)
-        .then((response) => response.json())
-        .then((result) => {
-          priceData = result.data;
-        })
-        .catch(error => console.log('error', error));
+        // await fetch("https://quantifycrypto.com/api/v1/coins/prices?rank_from=1&rank_to=1000", requestOptions)
+        // .then((response) => response.json())
+        // .then((result) => {
+        //   priceData = result.data;
+        // })
+        // .catch(error => console.log('error', error));
 
-        await fetch("https://quantifycrypto.com/api/v1/coins/percent-change?rank_from=1&rank_to=1000", requestOptions)
-        .then((response) => response.json())
-        .then((result) => {
-          percentData = result.data;
-          console.log(percentData);
-        })
-        .catch(error => console.log('error', error));
+        // await fetch("https://quantifycrypto.com/api/v1/coins/percent-change?rank_from=1&rank_to=1000", requestOptions)
+        // .then((response) => response.json())
+        // .then((result) => {
+        //   percentData = result.data;
+        //   console.log(percentData);
+        // })
+        // .catch(error => console.log('error', error));
 
         await fetch("https://quantifycrypto.com/api/v1/coins/list", requestOptions)
         .then((response) => response.json())
@@ -149,53 +158,37 @@
           coinData = result.data;
         })
         .catch(error => console.log('error', error));
-        if(coinData && priceData && percentData) {
+        if(coinData) {
 
-          this.desserts = coinData.map(async (item) => {
-            const price = priceData.filter((price_item) => price_item.id == item.id);
-            const percent = percentData.filter((percent_item) => percent_item.id == item.id);
+          for(let i =  0; i < coinData.length; i++)
+          {
+            await fetch("https://quantifycrypto.com/api/v1/coins/" + coinData[i].id, requestOptions)
+            .then((response) => response.json())
+            .then((result) => {
+              if(result.data) {
+                coinData[i].coin_price = result.data.coin_price;
+                coinData[i].percent_change_30d = result.data.percent_change_30d;
+                coinData[i].percent_change_ytd = result.data.percent_change_ytd;
+                coinData[i].percent_change_1year = result.data.percent_change_1year;
+                coinData[i].rsi_2h = result.data.rsi_2h;
+                coinData[i].macd_hist_2h = result.data.macd_hist_2h;
+                coinData[i].atr_2h = result.data.atr_2h;
+                coinData[i].bollinger_bands_lower_2h = result.data.bollinger_bands_lower_2h;
+                coinData[i].trend_critical = '-';
+                coinData[i].trend_daily = '-';
+                coinData[i].support = '-';
+                coinData[i].resistance = '-';
+              }
+            })
+            .catch(error => console.log(i, ':error', error));
+            this.desserts.push(coinData[i]);
+            // console.log(i);
+          }
 
-            item.status = false;
-
-            if(price && price.length > 0) {
-              item.coin_price = price[0].coin_price;
-            }
-            else {
-              item.coin_price = "";
-            }
-
-            if(percent && percent.length > 0) {
-              item.percent_change_5min = percent[0].percent_change_5min;
-              item.percent_change_15min = percent[0].percent_change_15min;
-              item.percent_change_1h = percent[0].percent_change_1h;
-              item.percent_change_2h = percent[0].percent_change_2h;
-              item.percent_change_4h = percent[0].percent_change_4h;
-              item.percent_change_24h = percent[0].percent_change_24h;
-              item.percent_change_7d = percent[0].percent_change_7d;
-              item.percent_change_14d = percent[0].percent_change_14d;
-              item.percent_change_30d = percent[0].percent_change_30d;
-              item.percent_change_ytd = percent[0].percent_change_ytd;
-              item.percent_change_1year = percent[0].percent_change_1year;
-            }
-            else {
-              item.percent_change_5min = "";
-              item.percent_change_15min = "";
-              item.percent_change_1h = "";
-              item.percent_change_2h = "";
-              item.percent_change_4h = "";
-              item.percent_change_24h = "";
-              item.percent_change_7d = "";
-              item.percent_change_14d = "";
-              item.percent_change_30d = "";
-              item.percent_change_ytd = "";
-              item.percent_change_1year = "";
-            }
-            return item;
-          });
         }
-        this.desserts = coinData;
-        console.log('==>', this.desserts);
+        // this.desserts = coinData;
         this.loading = false;
+        console.log('==>', this.desserts);
       },
       onSocketMessage ( event ) {
         if(this.desserts && event.data) {
@@ -236,6 +229,46 @@
       },
       getSrc ( src ) {
         return "https://quantifycrypto.s3-us-west-2.amazonaws.com/pictures/crypto-img/32/icon/" + src.toLowerCase() + ".png";
+      },
+      async updatePage ( ) {
+        if(this.loading) return;
+        this.loading = true;
+        let myHeaders = new Headers();
+        myHeaders.append("QC-Access-Key", "EQF6H18BNERJH2ML84F1");
+        myHeaders.append("QC-Secret-Key", "HzFyQix9rmtKp9ti9GAfLs7twqd1g5RAmqls0jJz2Z8bNQBz");
+
+        let requestOptions = {
+          method: 'GET',
+          headers: myHeaders,
+          redirect: 'follow'
+        };
+        
+        for(let i = (this.pagination.page - 1) * 10; i < Math.min(this.pagination.page * 10 , this.desserts.length); i++)
+        {
+          if(!this.desserts[i].percent_change_30d) {
+            await fetch("https://quantifycrypto.com/api/v1/coins/" + this.desserts[i].id, requestOptions)
+            .then((response) => response.json())
+            .then((result) => {
+              if(result.data) {
+                this.desserts[i].coin_price = result.data.coin_price;
+                this.desserts[i].percent_change_30d = result.data.percent_change_30d;
+                this.desserts[i].percent_change_ytd = result.data.percent_change_ytd;
+                this.desserts[i].percent_change_1year = result.data.percent_change_1year;
+                this.desserts[i].rsi_2h = result.data.rsi_2h;
+                this.desserts[i].macd_hist_2h = result.data.macd_hist_2h;
+                this.desserts[i].atr_2h = result.data.atr_2h;
+                this.desserts[i].bollinger_bands_lower_2h = result.data.bollinger_bands_lower_2h;
+                this.desserts[i].trend_critical = '-';
+                this.desserts[i].trend_daily = '-';
+                this.desserts[i].support = '-';
+                this.desserts[i].resistance = '-';
+              }
+            })
+            .catch(error => console.log('error', error));
+          }
+        }
+        this.loading = false;
+        // console.log(this.pagination);
       }
     },
   }
