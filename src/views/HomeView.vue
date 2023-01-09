@@ -42,7 +42,7 @@
       <div
         :class="getStatus(item.status, item.id)"
       >
-        {{ item.coin_price }}
+        ${{ item.coin_price }}
       </div>
     </template>
     <!-- eslint-disable-next-line -->
@@ -82,8 +82,8 @@
           sortable: false,
           value: 'rank',
         },
-        { text: 'Name', value: 'coin_name' },
-        { text: 'Price', value: 'coin_price' },
+        { text: 'Name', width: '200px', value: 'coin_name' },
+        { text: 'Price', value: 'coin_price', align: 'end' },
         { text: '30D%', value: 'percent_change_30d' },
         { text: 'YTD%', value: 'percent_change_ytd' },
         { text: '1Y%', value: 'percent_change_1year' },
@@ -166,10 +166,10 @@
             .then((response) => response.json())
             .then((result) => {
               if(result.data) {
-                coinData[i].coin_price = result.data.coin_price;
-                coinData[i].percent_change_30d = result.data.percent_change_30d;
-                coinData[i].percent_change_ytd = result.data.percent_change_ytd;
-                coinData[i].percent_change_1year = result.data.percent_change_1year;
+                coinData[i].coin_price = this.getRealValue(result.data.coin_price);
+                coinData[i].percent_change_30d = this.getRealValue(result.data.percent_change_30d);
+                coinData[i].percent_change_ytd = this.getRealValue(result.data.percent_change_ytd);
+                coinData[i].percent_change_1year = this.getRealValue(result.data.percent_change_1year);
                 coinData[i].rsi_2h = result.data.rsi_2h;
                 coinData[i].macd_hist_2h = result.data.macd_hist_2h;
                 coinData[i].atr_2h = result.data.atr_2h;
@@ -190,6 +190,18 @@
         this.loading = false;
         console.log('==>', this.desserts);
       },
+      getRealValue ( value ) {
+        if(Math.abs(value) > 1) {
+          return Math.round(value * 100) / 100;
+        } 
+        else if(value == 0) {
+          return 0;
+        }
+        else {
+          const pos = Math.floor(Math.log10(Math.abs(value))) * -1 + 1;
+          return Math.floor(value * Math.pow(10, pos)) / Math.pow(10, pos);
+        }
+      },
       onSocketMessage ( event ) {
         if(this.desserts && event.data) {
           const prices = JSON.parse(event.data);
@@ -198,7 +210,7 @@
           for(let i = 0; i < temp.length; i++)
           {
             if(temp[i] &&  prices[temp[i].coin_name.toLowerCase()]) {
-              temp[i].coin_price = prices[temp[i].coin_name.toLowerCase()];
+              temp[i].coin_price = this.getRealValue(prices[temp[i].coin_name.toLowerCase()]);
               temp[i].status = true;
             }
             else {
@@ -250,10 +262,10 @@
             .then((response) => response.json())
             .then((result) => {
               if(result.data) {
-                this.desserts[i].coin_price = result.data.coin_price;
-                this.desserts[i].percent_change_30d = result.data.percent_change_30d;
-                this.desserts[i].percent_change_ytd = result.data.percent_change_ytd;
-                this.desserts[i].percent_change_1year = result.data.percent_change_1year;
+                this.desserts[i].coin_price = this.getRealValue(result.data.coin_price);
+                this.desserts[i].percent_change_30d = this.getRealValue(result.data.percent_change_30d);
+                this.desserts[i].percent_change_ytd = this.getRealValue(result.data.percent_change_ytd);
+                this.desserts[i].percent_change_1year = this.getRealValue(result.data.percent_change_1year);
                 this.desserts[i].rsi_2h = result.data.rsi_2h;
                 this.desserts[i].macd_hist_2h = result.data.macd_hist_2h;
                 this.desserts[i].atr_2h = result.data.atr_2h;
