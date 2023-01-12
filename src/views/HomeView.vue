@@ -6,8 +6,6 @@
     :page="2"
     sort-by="calories"
     class="elevation-1"
-    :loading = "loading"
-    loading-text="Loading... Please wait"
     :options.sync="pagination"
     @update:page="updatePage()"
     :footer-props="footerProps"
@@ -101,8 +99,8 @@
         { text: 'MACD 2H', value: 'macd_hist_2h' },
         { text: 'ATR 2H', value: 'atr_2h' },
         { text: 'BB 2H', value: 'bollinger_bands_lower_2h' },
-        { text: 'MA 1H', value: 'ma_1h_12' },
-        { text: 'EMA 1H', value: 'ema_1h_12' },
+        { text: 'MA 12H', value: 'ma_1h_12' },
+        { text: 'EMA 12H', value: 'ema_1h_12' },
       ],
       pagination: {},
       listSize: [10, 25, 50, 100],
@@ -111,8 +109,9 @@
       loading: true,
       footerProps: {
         showFirstLastPage: true,
-        disableItemsPerPage: true,
+        // disableItemsPerPage: true,
         showCurrentPage: true,
+        itemsPerPageOptions: [10, 50, 100, -1],
       }
     }),
 
@@ -213,31 +212,6 @@
           for(let i = 0; i < temp.length; i++)
           {
             if(temp[i] &&  prices[temp[i].coin_name.toLowerCase()]) {
-              // let formdata = new FormData();
-              // formdata.append("symbol", this.desserts[i].coin_symbol);
-
-              // let detailRequest = {
-              //   method: 'POST',
-              //   body: formdata,
-              //   redirect: 'follow'
-              // };
-              // await fetch("https://pro.coingen.net/api/quantifycrypto-coin", detailRequest)
-              // .then((response) => response.json())
-              // .then((result) => {
-              //   if(result) {
-              //     temp[i].coin_price = this.getRealValue(result.coin_price);
-              //     temp[i].percent_change_30d = this.getRealValue(result.percent_change_30d);
-              //     temp[i].percent_change_ytd = this.getRealValue(result.percent_change_ytd);
-              //     temp[i].percent_change_1year = this.getRealValue(result.percent_change_1year);
-              //     temp[i].rsi_2h = result.rsi_2h;
-              //     temp[i].macd_hist_2h = result.macd_hist_2h;
-              //     temp[i].atr_2h = result.atr_2h;
-              //     temp[i].bollinger_bands_lower_2h = result.bollinger_bands_lower_2h;
-              //     temp[i].ma_1h_12 = result.ma_1h_12;
-              //     temp[i].ema_1h_12 = result.ema_1h_12;
-              //   }
-              // })
-              // .catch(error => console.log('error', error));
               temp[i].coin_price = this.getRealValue(prices[temp[i].coin_name.toLowerCase()]);
               temp[i].status = true;
             }
