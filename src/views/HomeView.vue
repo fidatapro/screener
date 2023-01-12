@@ -2,6 +2,7 @@
   <v-data-table
     :headers="headers"
     :items="desserts"
+    :items-per-page="10"
     :page="2"
     sort-by="calories"
     class="elevation-1"
@@ -9,6 +10,7 @@
     loading-text="Loading... Please wait"
     :options.sync="pagination"
     @update:page="updatePage()"
+    :footer-props="footerProps"
   >
     <template v-slot:top>
       <v-toolbar
@@ -69,6 +71,14 @@
         {{ item.percent_change_1year }} %
       </span>
     </template>
+    <!-- eslint-disable-next-line -->
+    <template v-slot:item.rsi_2h="{item}">
+      <span
+        :class="getRsiColor(item.rsi_2h)"
+      >
+        {{ item.rsi_2h }}
+      </span>
+    </template>
   </v-data-table>
 </template>
 
@@ -91,16 +101,19 @@
         { text: 'MACD 2H', value: 'macd_hist_2h' },
         { text: 'ATR 2H', value: 'atr_2h' },
         { text: 'BB 2H', value: 'bollinger_bands_lower_2h' },
-        { text: 'TREND CRITICAL', value: 'trend_critical' },
-        { text: 'TREND DAILY', value: 'trend_daily' },
-        { text: 'SUPPORT', value: 'support' },
-        { text: 'RESISTANCE', value: 'resistance' },
-    ],
+        { text: 'MA 1H', value: 'ma_1h_12' },
+        { text: 'EMA 1H', value: 'ema_1h_12' },
+      ],
       pagination: {},
       listSize: [10, 25, 50, 100],
       desserts: [],
       connection: null,
       loading: true,
+      footerProps: {
+        showFirstLastPage: true,
+        disableItemsPerPage: true,
+        showCurrentPage: true,
+      }
     }),
 
     watch: {
@@ -134,23 +147,6 @@
           redirect: 'follow'
         };
         let coinData = [];
-        // let priceData = [];
-        // let percentData = [];
-
-        // await fetch("https://quantifycrypto.com/api/v1/coins/prices?rank_from=1&rank_to=1000", requestOptions)
-        // .then((response) => response.json())
-        // .then((result) => {
-        //   priceData = result.data;
-        // })
-        // .catch(error => console.log('error', error));
-
-        // await fetch("https://quantifycrypto.com/api/v1/coins/percent-change?rank_from=1&rank_to=1000", requestOptions)
-        // .then((response) => response.json())
-        // .then((result) => {
-        //   percentData = result.data;
-        //   console.log(percentData);
-        // })
-        // .catch(error => console.log('error', error));
 
         await fetch("https://quantifycrypto.com/api/v1/coins/list", requestOptions)
         .then((response) => response.json())
@@ -159,29 +155,36 @@
         })
         .catch(error => console.log('error', error));
         if(coinData) {
-
-          for(let i =  0; i < coinData.length; i++)
+         
+          for(let i =  0, cnt = 0; cnt < 500; i++)
           {
-            await fetch("https://quantifycrypto.com/api/v1/coins/" + coinData[i].id, requestOptions)
+            var formdata = new FormData();
+            formdata.append("symbol", coinData[i].coin_symbol);
+
+            var detailRequest = {
+              method: 'POST',
+              body: formdata,
+              redirect: 'follow'
+            };
+            await fetch("https://pro.coingen.net/api/quantifycrypto-coin", detailRequest)
             .then((response) => response.json())
             .then((result) => {
-              if(result.data) {
-                coinData[i].coin_price = this.getRealValue(result.data.coin_price);
-                coinData[i].percent_change_30d = this.getRealValue(result.data.percent_change_30d);
-                coinData[i].percent_change_ytd = this.getRealValue(result.data.percent_change_ytd);
-                coinData[i].percent_change_1year = this.getRealValue(result.data.percent_change_1year);
-                coinData[i].rsi_2h = result.data.rsi_2h;
-                coinData[i].macd_hist_2h = result.data.macd_hist_2h;
-                coinData[i].atr_2h = result.data.atr_2h;
-                coinData[i].bollinger_bands_lower_2h = result.data.bollinger_bands_lower_2h;
-                coinData[i].trend_critical = '-';
-                coinData[i].trend_daily = '-';
-                coinData[i].support = '-';
-                coinData[i].resistance = '-';
+              if(result) {
+                coinData[i].coin_price = this.getRealValue(result.coin_price);
+                coinData[i].percent_change_30d = this.getRealValue(result.percent_change_30d);
+                coinData[i].percent_change_ytd = this.getRealValue(result.percent_change_ytd);
+                coinData[i].percent_change_1year = this.getRealValue(result.percent_change_1year);
+                coinData[i].rsi_2h = result.rsi_2h;
+                coinData[i].macd_hist_2h = result.macd_hist_2h;
+                coinData[i].atr_2h = result.atr_2h;
+                coinData[i].bollinger_bands_lower_2h = result.bollinger_bands_lower_2h;
+                coinData[i].ma_1h_12 = result.ma_1h_12;
+                coinData[i].ema_1h_12 = result.ema_1h_12;
               }
             })
             .catch(error => console.log(i, ':error', error));
             this.desserts.push(coinData[i]);
+            cnt++;
             // console.log(i);
           }
 
@@ -202,7 +205,7 @@
           return Math.floor(value * Math.pow(10, pos)) / Math.pow(10, pos);
         }
       },
-      onSocketMessage ( event ) {
+      async onSocketMessage ( event ) {
         if(this.desserts && event.data) {
           const prices = JSON.parse(event.data);
           let temp = this.desserts;
@@ -210,6 +213,31 @@
           for(let i = 0; i < temp.length; i++)
           {
             if(temp[i] &&  prices[temp[i].coin_name.toLowerCase()]) {
+              // let formdata = new FormData();
+              // formdata.append("symbol", this.desserts[i].coin_symbol);
+
+              // let detailRequest = {
+              //   method: 'POST',
+              //   body: formdata,
+              //   redirect: 'follow'
+              // };
+              // await fetch("https://pro.coingen.net/api/quantifycrypto-coin", detailRequest)
+              // .then((response) => response.json())
+              // .then((result) => {
+              //   if(result) {
+              //     temp[i].coin_price = this.getRealValue(result.coin_price);
+              //     temp[i].percent_change_30d = this.getRealValue(result.percent_change_30d);
+              //     temp[i].percent_change_ytd = this.getRealValue(result.percent_change_ytd);
+              //     temp[i].percent_change_1year = this.getRealValue(result.percent_change_1year);
+              //     temp[i].rsi_2h = result.rsi_2h;
+              //     temp[i].macd_hist_2h = result.macd_hist_2h;
+              //     temp[i].atr_2h = result.atr_2h;
+              //     temp[i].bollinger_bands_lower_2h = result.bollinger_bands_lower_2h;
+              //     temp[i].ma_1h_12 = result.ma_1h_12;
+              //     temp[i].ema_1h_12 = result.ema_1h_12;
+              //   }
+              // })
+              // .catch(error => console.log('error', error));
               temp[i].coin_price = this.getRealValue(prices[temp[i].coin_name.toLowerCase()]);
               temp[i].status = true;
             }
@@ -239,41 +267,49 @@
           return 'color-red';
         }
       },
+      getRsiColor ( color_val) {
+        if(Number(color_val) > 70) {
+          return 'color-green';
+        }
+        else if(Number(color_val) < 30) {
+          return 'color-red';
+        }
+        else {
+          return 'color-orange'
+        }
+      },
       getSrc ( src ) {
         return "https://quantifycrypto.s3-us-west-2.amazonaws.com/pictures/crypto-img/32/icon/" + src.toLowerCase() + ".png";
       },
       async updatePage ( ) {
         if(this.loading) return;
         this.loading = true;
-        let myHeaders = new Headers();
-        myHeaders.append("QC-Access-Key", "EQF6H18BNERJH2ML84F1");
-        myHeaders.append("QC-Secret-Key", "HzFyQix9rmtKp9ti9GAfLs7twqd1g5RAmqls0jJz2Z8bNQBz");
-
-        let requestOptions = {
-          method: 'GET',
-          headers: myHeaders,
-          redirect: 'follow'
-        };
         
         for(let i = (this.pagination.page - 1) * 10; i < Math.min(this.pagination.page * 10 , this.desserts.length); i++)
         {
-          if(!this.desserts[i].percent_change_30d) {
-            await fetch("https://quantifycrypto.com/api/v1/coins/" + this.desserts[i].id, requestOptions)
+          let formdata = new FormData();
+          formdata.append("symbol", this.desserts[i].coin_symbol);
+
+          let detailRequest = {
+            method: 'POST',
+            body: formdata,
+            redirect: 'follow'
+          };
+          if(this.desserts[i].percent_change_30d == undefined) {
+            await fetch("https://pro.coingen.net/api/quantifycrypto-coin", detailRequest)
             .then((response) => response.json())
             .then((result) => {
-              if(result.data) {
-                this.desserts[i].coin_price = this.getRealValue(result.data.coin_price);
-                this.desserts[i].percent_change_30d = this.getRealValue(result.data.percent_change_30d);
-                this.desserts[i].percent_change_ytd = this.getRealValue(result.data.percent_change_ytd);
-                this.desserts[i].percent_change_1year = this.getRealValue(result.data.percent_change_1year);
-                this.desserts[i].rsi_2h = result.data.rsi_2h;
-                this.desserts[i].macd_hist_2h = result.data.macd_hist_2h;
-                this.desserts[i].atr_2h = result.data.atr_2h;
-                this.desserts[i].bollinger_bands_lower_2h = result.data.bollinger_bands_lower_2h;
-                this.desserts[i].trend_critical = '-';
-                this.desserts[i].trend_daily = '-';
-                this.desserts[i].support = '-';
-                this.desserts[i].resistance = '-';
+              if(result) {
+                this.desserts[i].coin_price = this.getRealValue(result.coin_price);
+                this.desserts[i].percent_change_30d = this.getRealValue(result.percent_change_30d);
+                this.desserts[i].percent_change_ytd = this.getRealValue(result.percent_change_ytd);
+                this.desserts[i].percent_change_1year = this.getRealValue(result.percent_change_1year);
+                this.desserts[i].rsi_2h = result.rsi_2h;
+                this.desserts[i].macd_hist_2h = result.macd_hist_2h;
+                this.desserts[i].atr_2h = result.atr_2h;
+                this.desserts[i].bollinger_bands_lower_2h = result.bollinger_bands_lower_2h;
+                this.desserts[i].ma_1h_12 = result.ma_1h_12;
+                this.desserts[i].ema_1h_12 = result.ema_1h_12;
               }
             })
             .catch(error => console.log('error', error));
@@ -305,5 +341,8 @@
   }
   .color-green {
     color: #4caf50;
+  }
+  .color-orange {
+    color: #ff9800;
   }
 </style>
