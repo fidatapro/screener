@@ -42,3 +42,5 @@ Repository settings button
 Drop-down menu to select a folder for publishing source
 
 8. Click Save.
+
+See [Reference](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-from-a-branch).
