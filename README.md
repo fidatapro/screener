@@ -38,8 +38,6 @@ Repository settings button
 
 6. Under "Build and deployment", under "Branch", use the None or Branch drop-down menu and select a publishing source.
 
-Drop-down menu to select a publishing source
-
 7. Optionally, use the drop-down menu to select a folder for your publishing source.
 Drop-down menu to select a folder for publishing source
 
